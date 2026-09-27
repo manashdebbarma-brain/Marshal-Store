@@ -12,6 +12,7 @@ import {
   Printer,
   Share2,
   Wallet,
+  XCircle,
 } from "lucide-react";
 
 import { getOrders, type StoredOrder } from "@/lib/storage";
@@ -40,6 +41,11 @@ const STATUS_STYLES: Record<
     label: "Completed",
     className: "border-emerald-400/30 bg-emerald-400/10 text-emerald-400",
     icon: CheckCircle2,
+  },
+  cancelled: {
+    label: "Cancelled",
+    className: "border-rose-400/30 bg-rose-400/10 text-rose-400",
+    icon: XCircle,
   },
 };
 
