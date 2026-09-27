@@ -1,0 +1,243 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0a0f1d;
+  --foreground: #f8fafc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(
+      circle at 10% 10%,
+      rgba(138, 43, 226, 0.12),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 90% 20%,
+      rgba(0, 242, 254, 0.08),
+      transparent 30%
+    ),
+    #0a0f1d;
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #080c17;
+}
+::-webkit-scrollbar-thumb {
+  background: #273149;
+  border-radius: 10px;
+}
+
+.glass {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  backdrop-filter: blur(16px);
+}
+
+.neon-border {
+  border: 1px solid rgba(0, 242, 254, 0.25);
+}
+
+.neon-text {
+  color: #00f2fe;
+}
+
+.gradient-text {
+  background: linear-gradient(90deg, #00f2fe, #8a2be2);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* =========================
+   LIGHT MODE
+========================= */
+
+html.light {
+  --background: #f5f7fb;
+  --foreground: #0f172a;
+}
+
+html.light body {
+  background:
+    radial-gradient(
+      circle at 10% 10%,
+      rgba(138, 43, 226, 0.06),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 90% 20%,
+      rgba(0, 242, 254, 0.06),
+      transparent 30%
+    ),
+    #f5f7fb;
+  color: #0f172a;
+}
+
+html.light .glass {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+/* Text flips */
+html.light .text-white {
+  color: #0f172a;
+}
+html.light .text-slate-300 {
+  color: #334155;
+}
+html.light .text-slate-400 {
+  color: #475569;
+}
+html.light .text-slate-500 {
+  color: #64748b;
+}
+
+/* Surfaces flip */
+html.light .bg-white\/5 {
+  background-color: rgba(15, 23, 42, 0.04);
+}
+html.light .bg-white\/\[0\.02\] {
+  background-color: rgba(15, 23, 42, 0.02);
+}
+html.light .bg-white\/\[0\.03\] {
+  background-color: rgba(15, 23, 42, 0.03);
+}
+html.light .bg-white\/10 {
+  background-color: rgba(15, 23, 42, 0.08);
+}
+
+/* Borders flip */
+html.light .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+/* Navbar surface */
+html.light header.sticky {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+
+/* Hardcoded dark backgrounds */
+html.light .bg-\[\#0a0f1d\] {
+  background-color: #f5f7fb;
+}
+html.light .bg-\[\#0f172a\] {
+  background-color: #ffffff;
+}
+html.light .bg-\[\#111827\] {
+  background-color: #ffffff;
+}
+html.light .bg-\[\#0f172a\]\/90,
+html.light .bg-\[\#0a0f1d\]\/90 {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+/* =========================
+   LIGHT MODE — MODALS & DROPDOWNS
+========================= */
+
+html.light .bg-\[\#0f172a\],
+html.light .bg-\[\#111827\] {
+  background-color: #ffffff !important;
+  color: #0f172a;
+}
+
+html.light .bg-\[\#0a0f1d\] {
+  background-color: #f5f7fb !important;
+}
+
+html.light .bg-\[\#0a0f1d\]\/90 {
+  background-color: rgba(245, 247, 251, 0.9) !important;
+}
+
+html.light .border-white\/5 {
+  border-color: rgba(15, 23, 42, 0.06);
+}
+
+html.light .hover\:bg-white\/5:hover,
+html.light .hover\:bg-white\/\[0\.03\]:hover {
+  background-color: rgba(15, 23, 42, 0.04);
+}
+
+/* Dropdown/search suggestion surfaces */
+html.light .shadow-2xl,
+html.light .shadow-lg {
+  box-shadow: 0 8px 32px -8px rgba(15, 23, 42, 0.15);
+}
+
+/* Focus rings */
+*:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Smooth hover transitions on all buttons */
+button {
+  transition: background-color 0.15s ease, color 0.15s ease,
+    border-color 0.15s ease, transform 0.15s ease;
+}
+
+/* Prevent text selection on nav/buttons for app feel */
+button,
+nav a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Skeleton shimmer */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(148, 163, 184, 0.08) 0%,
+    rgba(148, 163, 184, 0.16) 50%,
+    rgba(148, 163, 184, 0.08) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  border-radius: 12px;
+}
+
+html.light .skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(15, 23, 42, 0.04) 0%,
+    rgba(15, 23, 42, 0.08) 50%,
+    rgba(15, 23, 42, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
