@@ -107,10 +107,10 @@ const DEFAULT_ADMINS: AdminAccount[] = [
     isDefault: true,
   },
   {
-    id: "petition",
+    id: "MAINADMIN205",
     name: "Petition Admin",
     role: "PETITION",
-    passwordHash: hashPassword("petition@2025"),
+    passwordHash: hashPassword("access@205"),
     isDefault: true,
   },
 ];

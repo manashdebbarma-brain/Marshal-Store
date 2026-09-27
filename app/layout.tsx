@@ -8,6 +8,11 @@ import PageTransition from "@/components/PageTransition";
 import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000"
+  ),
   title: "Marshal Store — Instant Game Top-Ups",
   description:
     "Instant game top-ups, gift cards and digital subscriptions. Fast, secure, 24/7.",
