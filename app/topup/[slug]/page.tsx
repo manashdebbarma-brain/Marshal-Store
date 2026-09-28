@@ -39,6 +39,17 @@ const GAMES_DATA: Record<string, Game> = {
       { id: '500', name: '500 Diamonds', price: 840 },
     ],
   },
+  'mobile-legends': {
+    slug: 'mobile-legends',
+    name: 'Mobile Legends Diamonds',
+    code: 'mobile-legends', // Change this to match ALUU's exact code if needed (e.g., 'mlbb')
+    packages: [
+      { id: '86', name: '86 Diamonds', price: 85 },
+      { id: '172', name: '172 Diamonds', price: 170 },
+      { id: '257', name: '257 Diamonds', price: 255 },
+      { id: '706', name: '706 Diamonds', price: 680 },
+    ],
+  },
 };
 
 export default function TopUpPage({ params }: { params: { slug: string } }) {
