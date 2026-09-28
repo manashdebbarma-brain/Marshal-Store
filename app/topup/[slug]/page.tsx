@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface Package {
@@ -41,11 +41,10 @@ const GAMES_DATA: Record<string, Game> = {
   },
 };
 
-export default function TopUpPage({ params }: { params: Promise<{ slug: string }> }) {
-  const resolvedParams = use(params);
+export default function TopUpPage({ params }: { params: { slug: string } }) {
   const router = useRouter();
 
-  const game = GAMES_DATA[resolvedParams.slug] || GAMES_DATA['bgmi'];
+  const game = GAMES_DATA[params.slug] || GAMES_DATA['bgmi'];
 
   const [playerId, setPlayerId] = useState('');
   const [serverCode, setServerCode] = useState('');
