@@ -53,41 +53,64 @@ export default function Navbar() {
   const categoryWrapperRef = useRef<HTMLDivElement>(null);
 
   // ═══════════════════════════════════════════════════════════
-  // 📧 WELCOME EMAIL TRIGGER
-  // Sends once per user per browser (tracked in localStorage)
+  // 📧 EMAIL TRIGGERS
+  // 1. Welcome email  — once per user, forever
+  // 2. Login-success  — once per browser tab session
   // ═══════════════════════════════════════════════════════════
   useEffect(() => {
-    if (!session?.user?.email || !session?.user?.name) return;
+    const email = session?.user?.email;
+    const name = session?.user?.name;
 
-    const key = `welcome-sent-${session.user.email}`;
+    if (!email || !name) return;
 
-    // Skip if already sent on this browser
-    if (localStorage.getItem(key)) return;
-
-    // Mark as sent BEFORE sending to prevent duplicate fires
-    localStorage.setItem(key, "true");
-
-    fetch("/api/send-welcome", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: session.user.email,
-        name: session.user.name,
-      }),
-    })
-      .then((res) => {
-        if (!res.ok) {
-          // Remove flag so it retries next time
-          localStorage.removeItem(key);
-          console.warn("Welcome email failed — will retry next visit");
-        } else {
-          console.log(`✅ Welcome email sent to ${session.user.email}`);
-        }
+    // ─────────────────────────────────────────────
+    // 1️⃣ Welcome email — once per user, forever
+    // ─────────────────────────────────────────────
+    const welcomeKey = `welcome-sent-${email}`;
+    if (!localStorage.getItem(welcomeKey)) {
+      localStorage.setItem(welcomeKey, "true");
+      fetch("/api/send-welcome", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name, type: "welcome" }),
       })
-      .catch((err) => {
-        localStorage.removeItem(key);
-        console.error("Welcome email fetch failed:", err);
-      });
+        .then((res) => {
+          if (!res.ok) {
+            localStorage.removeItem(welcomeKey);
+            console.warn("Welcome email failed — will retry next visit");
+          } else {
+            console.log(`✅ Welcome email sent to ${email}`);
+          }
+        })
+        .catch((err) => {
+          localStorage.removeItem(welcomeKey);
+          console.error("Welcome email fetch failed:", err);
+        });
+    }
+
+    // ─────────────────────────────────────────────
+    // 2️⃣ Login-success email — once per tab session
+    // ─────────────────────────────────────────────
+    const loginKey = `login-notified-${email}`;
+    if (!sessionStorage.getItem(loginKey)) {
+      sessionStorage.setItem(loginKey, "true");
+      fetch("/api/send-welcome", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, name, type: "login-success" }),
+      })
+        .then((res) => {
+          if (res.ok) {
+            console.log(`✅ Login-success email sent to ${email}`);
+          } else {
+            sessionStorage.removeItem(loginKey);
+          }
+        })
+        .catch((err) => {
+          sessionStorage.removeItem(loginKey);
+          console.error("Login-success email fetch failed:", err);
+        });
+    }
   }, [session]);
 
   // Clean up any legacy fake user from localStorage on mount
