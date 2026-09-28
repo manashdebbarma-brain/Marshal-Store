@@ -1,231 +1,242 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect, use } from 'react';
+import { useRouter } from 'next/navigation';
 
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
+interface Package {
+  id: string;
+  name: string;
+  price: number;
 }
 
-const GAME_PACKAGES: Record<string, Array<{ id: string; name: string; diamonds: string; bonus?: string; price: number }>> = {
-  "mobile-legends": [
-    { id: "ml_50", name: "50 Diamonds", diamonds: "50", bonus: "+5", price: 89 },
-    { id: "ml_150", name: "150 Diamonds", diamonds: "150", bonus: "+15", price: 260 },
-    { id: "ml_250", name: "250 Diamonds", diamonds: "250", bonus: "+25", price: 420 },
-    { id: "ml_pass", name: "Weekly Diamond Pass", diamonds: "Pass", bonus: "210 Total", price: 160 },
-    { id: "ml_500", name: "500 Diamonds", diamonds: "500", bonus: "+65", price: 840 },
-    { id: "ml_1000", name: "1000 Diamonds", diamonds: "1000", bonus: "+155", price: 1680 },
-  ],
+interface Game {
+  slug: string;
+  name: string;
+  code: string;
+  packages: Package[];
+}
+
+const GAMES_DATA: Record<string, Game> = {
+  'bgmi': {
+    slug: 'bgmi',
+    name: 'BGMI UC',
+    code: 'bgmi',
+    packages: [
+      { id: '50', name: '50 UC', price: 45 },
+      { id: '300', name: '300 UC', price: 249 },
+      { id: '600', name: '600 UC', price: 479 },
+      { id: '1500', name: '1500 UC', price: 1190 },
+    ],
+  },
+  'free-fire': {
+    slug: 'free-fire',
+    name: 'Free Fire Diamonds',
+    code: 'free-fire',
+    packages: [
+      { id: '50', name: '50 Diamonds', price: 89 },
+      { id: '150', name: '150 Diamonds', price: 260 },
+      { id: '250', name: '250 Diamonds', price: 420 },
+      { id: '500', name: '500 Diamonds', price: 840 },
+    ],
+  },
 };
 
-export default function TopUpPage() {
-  const params = useParams();
-  const slug = (params?.slug as string) || "mobile-legends";
+export default function TopUpPage({ params }: { params: Promise<{ slug: string }> }) {
+  const resolvedParams = use(params);
+  const router = useRouter();
 
-  const packages = GAME_PACKAGES[slug] || GAME_PACKAGES["mobile-legends"];
-  const [selectedPkg, setSelectedPkg] = useState(packages[0]);
+  const game = GAMES_DATA[resolvedParams.slug] || GAMES_DATA['bgmi'];
 
-  const [playerId, setPlayerId] = useState("");
-  const [serverId, setServerId] = useState("");
-  const [verifiedName, setVerifiedName] = useState<string | null>(null);
+  const [playerId, setPlayerId] = useState('');
+  const [serverCode, setServerCode] = useState('');
+  const [playerName, setPlayerName] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [verifyError, setVerifyError] = useState("");
+  const [verifyError, setVerifyError] = useState('');
+  const [selectedPkg, setSelectedPkg] = useState<Package | null>(game.packages[0] || null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [successMessage, setSuccessMessage] = useState("");
 
+  // Auto-verify player when typing ID
   useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-    document.body.appendChild(script);
-  }, []);
-
-  useEffect(() => {
-    const cleanPlayerId = playerId.trim();
-    const cleanServerId = serverId.trim();
-
-    if (!cleanPlayerId || cleanPlayerId.length < 4) {
-      setVerifiedName(null);
-      setVerifyError("");
-      setIsVerifying(false);
+    if (!playerId || playerId.length < 5) {
+      setPlayerName(null);
+      setVerifyError('');
       return;
     }
 
-    setIsVerifying(true);
-    setVerifyError("");
-    setVerifiedName(null);
-
     const timer = setTimeout(async () => {
+      setIsVerifying(true);
+      setVerifyError('');
       try {
-        const response = await fetch("/api/verify-player", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ gameSlug: slug, playerId: cleanPlayerId, serverId: cleanServerId }),
+        const res = await fetch('/api/verify-player', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerId, gameCode: game.code, serverCode }),
         });
-
-        const data = await response.json();
-        if (response.ok && data.username) {
-          setVerifiedName(data.username);
+        const data = await res.json();
+        if (res.ok && (data.username || data.name || data.player_name)) {
+          setPlayerName(data.username || data.name || data.player_name);
         } else {
-          setVerifyError(data.error || "Player ID or Server ID not found.");
+          setVerifyError(data.error || 'Failed to connect to verification servers.');
+          setPlayerName(null);
         }
       } catch (err) {
-        setVerifyError("Verification server unreachable.");
+        setVerifyError('Failed to connect to verification servers.');
+        setPlayerName(null);
       } finally {
         setIsVerifying(false);
       }
     }, 600);
 
     return () => clearTimeout(timer);
-  }, [playerId, serverId, slug]);
+  }, [playerId, serverCode, game.code]);
 
-  const handleCheckout = async () => {
-    if (!verifiedName) return;
+  // Load Razorpay script dynamically
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  const handleCheckout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!playerId || !selectedPkg) return;
+
     setIsProcessing(true);
-
     try {
-      const res = await fetch("/api/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: selectedPkg.price,
+          playerId,
+          gameCode: game.code,
           packageId: selectedPkg.id,
-          playerId: playerId.trim(),
-          serverId: serverId.trim(),
-          gameSlug: slug,
+          amount: selectedPkg.price,
+          packageName: selectedPkg.name,
         }),
       });
 
       const orderData = await res.json();
-      if (!res.ok) throw new Error(orderData.error || "Failed to initialize payment.");
+      if (!res.ok) {
+        alert(orderData.error || 'Failed to create order');
+        setIsProcessing(false);
+        return;
+      }
+
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) {
+        alert('Razorpay SDK failed to load. Are you online?');
+        setIsProcessing(false);
+        return;
+      }
 
       const options = {
-        key: orderData.keyId,
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_ThRdaDVKRm3oym',
         amount: orderData.amount,
         currency: orderData.currency,
-        name: "MarshalStore",
-        description: `${selectedPkg.name} for ${verifiedName}`,
-        order_id: orderData.orderId,
+        name: 'Marshal Store',
+        description: `${game.name} - ${selectedPkg.name}`,
+        order_id: orderData.id,
         handler: async function (response: any) {
-          const verifyRes = await fetch("/api/create-order", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "verify_and_fulfill",
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              playerId: playerId.trim(),
-              serverId: serverId.trim(),
-              packageId: selectedPkg.id,
-            }),
-          });
-
-          const verifyData = await verifyRes.json();
-          if (verifyRes.ok) {
-            setSuccessMessage(`Top-up successful! Order Ref: ${verifyData.orderReference}`);
-          } else {
-            alert(verifyData.error || "Payment verification failed.");
-          }
+          router.push(`/orders?orderId=${orderData.receipt}&success=true`);
         },
-        prefill: { name: verifiedName },
-        theme: { color: "#06b6d4" },
+        prefill: {
+          name: playerName || 'Gaming Customer',
+        },
+        theme: {
+          color: '#6366f1',
+        },
       };
 
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-    } catch (err: any) {
-      alert(err.message || "Checkout error.");
+      const paymentObject = new (window as any).Razorpay(options);
+      paymentObject.open();
+    } catch (err) {
+      console.error(err);
+      alert('Something went wrong during checkout.');
     } finally {
       setIsProcessing(false);
     }
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-slate-900 text-white rounded-2xl shadow-xl border border-slate-800 mt-10 space-y-8">
-      {/* Account Details Step */}
-      <div>
-        <h2 className="text-xl font-bold mb-1">1. Enter Account Details</h2>
-        <p className="text-slate-400 text-xs mb-4">In-game username will automatically verify.</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input
-            type="text"
-            value={playerId}
-            onChange={(e) => setPlayerId(e.target.value)}
-            placeholder="Player ID (e.g. 155733610)"
-            className="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm"
-          />
-          <input
-            type="text"
-            value={serverId}
-            onChange={(e) => setServerId(e.target.value)}
-            placeholder="Zone/Server ID (e.g. 2800)"
-            className="px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 focus:outline-none focus:border-cyan-500 text-sm"
-          />
-        </div>
+    <div className="min-h-screen bg-slate-950 text-slate-100 py-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+        <h1 className="text-2xl font-bold mb-2">{game.name} Top Up</h1>
+        <p className="text-slate-400 text-sm mb-6">Enter your credentials and select your package to instantly top up.</p>
 
-        {isVerifying && <p className="text-cyan-400 text-xs mt-2 animate-pulse">Verifying player ID...</p>}
-        {verifiedName && (
-          <div className="mt-3 p-3 bg-emerald-950/60 border border-emerald-500/50 rounded-xl text-emerald-300 text-sm flex items-center gap-2">
-            <span>✓</span> Account Verified: <strong className="text-white">{verifiedName}</strong>
-          </div>
-        )}
-        {verifyError && !isVerifying && (
-          <p className="mt-2 text-red-400 text-xs">{verifyError}</p>
-        )}
-      </div>
-
-      {/* Package Selection Step */}
-      <div>
-        <h2 className="text-xl font-bold mb-1">2. Select Recharge Amount</h2>
-        <p className="text-slate-400 text-xs mb-4">Choose your preferred diamond pack.</p>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {packages.map((pkg) => (
-            <button
-              key={pkg.id}
-              onClick={() => setSelectedPkg(pkg)}
-              className={`p-4 rounded-xl border text-left transition flex flex-col justify-between ${
-                selectedPkg.id === pkg.id
-                  ? "bg-cyan-950/40 border-cyan-500 text-white ring-1 ring-cyan-500"
-                  : "bg-slate-800/60 border-slate-700 hover:border-slate-500 text-slate-300"
-              }`}
-            >
-              <div>
-                <p className="font-bold text-sm text-white">{pkg.name}</p>
-                {pkg.bonus && <span className="text-xs text-cyan-400 font-medium">{pkg.bonus}</span>}
-              </div>
-              <p className="mt-3 font-extrabold text-cyan-400 text-base">₹{pkg.price}</p>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Checkout Bar */}
-      {successMessage ? (
-        <div className="p-4 bg-emerald-950/80 border border-emerald-500 rounded-xl text-emerald-300 text-center">
-          <p className="font-bold">{successMessage}</p>
-        </div>
-      ) : (
-        <div className="p-4 bg-slate-800/80 border border-slate-700 rounded-xl flex items-center justify-between">
+        <form onSubmit={handleCheckout} className="space-y-6">
           <div>
-            <p className="text-xs text-slate-400">Selected Option</p>
-            <p className="font-bold text-white">{selectedPkg.name} — <span className="text-cyan-400">₹{selectedPkg.price}</span></p>
+            <label className="block text-sm font-medium mb-2">1. Enter Account Details</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <input
+                  type="text"
+                  placeholder="Enter Player ID"
+                  value={playerId}
+                  onChange={(e) => setPlayerId(e.target.value)}
+                  required
+                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+              {game.code === 'genshin' && (
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Server Code (e.g. os_asia)"
+                    value={serverCode}
+                    onChange={(e) => setServerCode(e.target.value)}
+                    required
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-4 py-3 text-sm focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              )}
+            </div>
+
+            {isVerifying && <p className="text-xs text-indigo-400 mt-2">Verifying player ID...</p>}
+            {playerName && <p className="text-xs text-emerald-400 mt-2 font-medium">Verified Player: {playerName}</p>}
+            {verifyError && <p className="text-xs text-rose-500 mt-2">{verifyError}</p>}
           </div>
-          <button
-            onClick={handleCheckout}
-            disabled={!verifiedName || isProcessing}
-            className={`px-8 py-3 rounded-xl font-semibold transition ${
-              verifiedName && !isProcessing
-                ? "bg-cyan-500 hover:bg-cyan-400 text-slate-950 cursor-pointer"
-                : "bg-slate-800 text-slate-500 cursor-not-allowed"
-            }`}
-          >
-            {isProcessing ? "Opening..." : `Pay ₹{selectedPkg.price}`}
-          </button>
-        </div>
-      )}
+
+          <div>
+            <label className="block text-sm font-medium mb-2">2. Select Recharge Amount</label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {game.packages.map((pkg) => (
+                <div
+                  key={pkg.id}
+                  onClick={() => setSelectedPkg(pkg)}
+                  className={`border rounded-xl p-4 cursor-pointer transition-all ${
+                    selectedPkg?.id === pkg.id
+                      ? 'border-indigo-500 bg-indigo-950/30 shadow-lg'
+                      : 'border-slate-800 bg-slate-950 hover:border-slate-700'
+                  }`}
+                >
+                  <div className="font-semibold text-sm">{pkg.name}</div>
+                  <div className="text-indigo-400 font-bold mt-2">₹{pkg.price}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
+            <div>
+              <span className="text-xs text-slate-400 block">Selected Option</span>
+              <span className="text-sm font-bold">
+                {selectedPkg ? `${selectedPkg.name} — ₹${selectedPkg.price}` : 'None selected'}
+              </span>
+            </div>
+            <button
+              type="submit"
+              disabled={!playerId || !selectedPkg || isProcessing}
+              className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium px-6 py-3 rounded-xl transition-all shadow-lg shadow-indigo-600/20"
+            >
+              {isProcessing ? 'Processing...' : selectedPkg ? `Pay ₹${selectedPkg.price}` : 'Select a Package'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
