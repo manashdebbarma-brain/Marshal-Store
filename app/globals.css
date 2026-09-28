@@ -14,42 +14,201 @@
 html {
   scroll-behavior: smooth;
   transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
-  background:
-    radial-gradient(
-      circle at 10% 10%,
-      rgba(138, 43, 226, 0.12),
-      transparent 30%
-    ),
-    radial-gradient(
-      circle at 90% 20%,
-      rgba(0, 242, 254, 0.08),
-      transparent 30%
-    ),
-    #0a0f1d;
+  width: 100%;
+  overflow-x: hidden;
+  background: #0a0f1d;
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* =========================
+   LIGHT MODE — MASTER OVERRIDES
+========================= */
+
+html.light {
+  --background: #f5f7fb;
+  --foreground: #0f172a;
+}
+
+html.light body {
+  background: #f5f7fb !important;
+  color: #0f172a !important;
+}
+
+/* === Navbar / Header === */
+html.light header,
+html.light header.sticky {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(15, 23, 42, 0.08) !important;
+  color: #0f172a !important;
+}
+
+/* === All dark hardcoded backgrounds become white === */
+html.light .bg-\[\#0a0f1d\],
+html.light .bg-\[\#0a0f1d\]\/90,
+html.light .bg-\[\#0a0f1d\]\/95,
+html.light .bg-\[\#0f172a\],
+html.light .bg-\[\#0f172a\]\/90,
+html.light .bg-\[\#111827\],
+html.light .bg-\[\#080c17\] {
+  background-color: #ffffff !important;
+}
+
+/* === Tailwind dark backgrounds become white/light === */
+html.light .bg-slate-950,
+html.light .bg-slate-900,
+html.light .bg-slate-800 {
+  background-color: #ffffff !important;
+}
+
+html.light .bg-slate-50,
+html.light .bg-slate-100 {
+  background-color: #f8fafc !important;
+}
+
+/* === Gradients used on cards become light === */
+html.light .bg-gradient-to-br.from-slate-900,
+html.light .bg-gradient-to-br.from-slate-800,
+html.light .bg-gradient-to-r.from-slate-900,
+html.light .bg-gradient-to-r.from-slate-800 {
+  background-image: linear-gradient(to bottom right, #ffffff, #f1f5f9) !important;
+}
+
+/* === ALL Text Colors flip to black in light mode === */
+html.light .text-white,
+html.light .text-slate-50,
+html.light .text-slate-100,
+html.light .text-slate-200,
+html.light .text-slate-300 {
+  color: #0f172a !important;
+}
+
+html.light .text-slate-400 {
+  color: #475569 !important;
+}
+
+html.light .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Keep accent colors intact */
+html.light .text-cyan-400,
+html.light .text-cyan-500 {
+  color: #06b6d4 !important;
+}
+html.light .text-emerald-500,
+html.light .text-green-500 {
+  color: #10b981 !important;
+}
+html.light .text-rose-500,
+html.light .text-red-500 {
+  color: #ef4444 !important;
+}
+html.light .text-yellow-400 {
+  color: #eab308 !important;
+}
+html.light .text-indigo-400,
+html.light .text-indigo-300 {
+  color: #6366f1 !important;
+}
+
+/* === White-tinted surfaces become light gray === */
+html.light .bg-white\/5,
+html.light .bg-white\/10,
+html.light .bg-white\/\[0\.02\],
+html.light .bg-white\/\[0\.03\],
+html.light .bg-white\/\[0\.05\] {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+}
+
+/* === White borders become subtle dark === */
+html.light .border-white\/5,
+html.light .border-white\/10,
+html.light .border-white\/20 {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+html.light .border-slate-800,
+html.light .border-slate-700 {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+/* === Hover states === */
+html.light .hover\:bg-white\/5:hover,
+html.light .hover\:bg-white\/10:hover {
+  background-color: rgba(15, 23, 42, 0.06) !important;
+}
+
+html.light .hover\:text-white:hover {
+  color: #0f172a !important;
+}
+
+/* === Input fields === */
+html.light input,
+html.light textarea,
+html.light select {
+  color: #0f172a !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* === Shadows become softer in light mode === */
+html.light .shadow-2xl,
+html.light .shadow-xl,
+html.light .shadow-lg {
+  box-shadow: 0 8px 32px -8px rgba(15, 23, 42, 0.15) !important;
+}
+
+/* === Dropdowns & Modals === */
+html.light .bg-\[\#111827\],
+html.light [role="menu"],
+html.light .dropdown-menu {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+/* =========================
+   Scrollbar
+========================= */
 ::-webkit-scrollbar {
   width: 8px;
 }
 ::-webkit-scrollbar-track {
   background: #080c17;
 }
+html.light ::-webkit-scrollbar-track {
+  background: #e2e8f0;
+}
 ::-webkit-scrollbar-thumb {
   background: #273149;
   border-radius: 10px;
 }
+html.light ::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+}
 
+/* =========================
+   Utility Classes
+========================= */
 .glass {
   background: rgba(15, 23, 42, 0.7);
   border: 1px solid rgba(148, 163, 184, 0.12);
   backdrop-filter: blur(16px);
+}
+
+html.light .glass {
+  background: rgba(255, 255, 255, 0.75);
+  border-color: rgba(15, 23, 42, 0.08);
 }
 
 .neon-border {
@@ -75,141 +234,25 @@ body {
   scrollbar-width: none;
 }
 
-/* =========================
-   LIGHT MODE
-========================= */
-
-html.light {
-  --background: #f5f7fb;
-  --foreground: #0f172a;
-}
-
-html.light body {
-  background:
-    radial-gradient(
-      circle at 10% 10%,
-      rgba(138, 43, 226, 0.06),
-      transparent 30%
-    ),
-    radial-gradient(
-      circle at 90% 20%,
-      rgba(0, 242, 254, 0.06),
-      transparent 30%
-    ),
-    #f5f7fb;
-  color: #0f172a;
-}
-
-html.light .glass {
-  background: rgba(255, 255, 255, 0.75);
-  border-color: rgba(15, 23, 42, 0.08);
-}
-
-/* Text flips */
-html.light .text-white {
-  color: #0f172a;
-}
-html.light .text-slate-300 {
-  color: #334155;
-}
-html.light .text-slate-400 {
-  color: #475569;
-}
-html.light .text-slate-500 {
-  color: #64748b;
-}
-
-/* Surfaces flip */
-html.light .bg-white\/5 {
-  background-color: rgba(15, 23, 42, 0.04);
-}
-html.light .bg-white\/\[0\.02\] {
-  background-color: rgba(15, 23, 42, 0.02);
-}
-html.light .bg-white\/\[0\.03\] {
-  background-color: rgba(15, 23, 42, 0.03);
-}
-html.light .bg-white\/10 {
-  background-color: rgba(15, 23, 42, 0.08);
-}
-
-/* Borders flip */
-html.light .border-white\/10 {
-  border-color: rgba(15, 23, 42, 0.1);
-}
-
-/* Navbar surface */
-html.light header.sticky {
-  background-color: rgba(255, 255, 255, 0.9);
-}
-
-/* Hardcoded dark backgrounds */
-html.light .bg-\[\#0a0f1d\] {
-  background-color: #f5f7fb;
-}
-html.light .bg-\[\#0f172a\] {
-  background-color: #ffffff;
-}
-html.light .bg-\[\#111827\] {
-  background-color: #ffffff;
-}
-html.light .bg-\[\#0f172a\]\/90,
-html.light .bg-\[\#0a0f1d\]\/90 {
-  background-color: rgba(255, 255, 255, 0.9);
-}
-/* =========================
-   LIGHT MODE — MODALS & DROPDOWNS
-========================= */
-
-html.light .bg-\[\#0f172a\],
-html.light .bg-\[\#111827\] {
-  background-color: #ffffff !important;
-  color: #0f172a;
-}
-
-html.light .bg-\[\#0a0f1d\] {
-  background-color: #f5f7fb !important;
-}
-
-html.light .bg-\[\#0a0f1d\]\/90 {
-  background-color: rgba(245, 247, 251, 0.9) !important;
-}
-
-html.light .border-white\/5 {
-  border-color: rgba(15, 23, 42, 0.06);
-}
-
-html.light .hover\:bg-white\/5:hover,
-html.light .hover\:bg-white\/\[0\.03\]:hover {
-  background-color: rgba(15, 23, 42, 0.04);
-}
-
-/* Dropdown/search suggestion surfaces */
-html.light .shadow-2xl,
-html.light .shadow-lg {
-  box-shadow: 0 8px 32px -8px rgba(15, 23, 42, 0.15);
-}
-
-/* Focus rings */
 *:focus-visible {
   outline: 2px solid #22d3ee;
   outline-offset: 2px;
   border-radius: 6px;
 }
 
-/* Smooth hover transitions on all buttons */
 button {
   transition: background-color 0.15s ease, color 0.15s ease,
     border-color 0.15s ease, transform 0.15s ease;
 }
 
-/* Prevent text selection on nav/buttons for app feel */
 button,
 nav a {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Skeleton shimmer */
+/* =========================
+   Skeleton shimmer
+========================= */
 @keyframes skeleton-shimmer {
   0% {
     background-position: -200% 0;

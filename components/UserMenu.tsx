@@ -1,139 +1,124 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  User,
-  LogOut,
-  Wallet,
-  Package,
-  ChevronDown,
-} from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { LogOut, Package, Wallet, User as UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { clearUser, getUser, type User as UserType } from "@/lib/auth";
-import { toast } from "@/components/Toast";
-import { Shield } from "lucide-react";
 
-export default function UserMenu() {
-  const router = useRouter();
+interface UserMenuProps {
+  user?: {
+    name: string;
+    email: string;
+    image?: string;
+  };
+  onSignOut?: () => void | Promise<void>;
+}
+
+export default function UserMenu({ user, onSignOut }: UserMenuProps) {
   const [open, setOpen] = useState(false);
-  const [user, setUser] = useState<UserType | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    function refresh() {
-      setUser(getUser());
-    }
-    refresh();
-    window.addEventListener("user-updated", refresh);
-    return () => window.removeEventListener("user-updated", refresh);
-  }, []);
-
-  /* Close on outside click */
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (!user) return null;
-
-  function handleLogout() {
-    clearUser();
-    setOpen(false);
-    toast("Logged out successfully", "info");
-    router.push("/");
-  }
-
-  const initial = user.name.charAt(0).toUpperCase();
+  const displayName = user?.name || "User";
+  const displayEmail = user?.email || "";
+  const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <div ref={menuRef} className="relative">
+    <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-400/5 py-1.5 pl-1.5 pr-3 transition hover:bg-cyan-400/10"
+        className="flex items-center gap-2 rounded-xl border px-2.5 py-1.5 transition
+                   border-cyan-400/40 bg-cyan-400/5 hover:bg-cyan-400/10"
       >
-        <span className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-cyan-400 to-teal-400 text-xs font-black text-black">
-          {initial}
+        {user?.image ? (
+          <img
+            src={user.image}
+            alt={displayName}
+            className="h-6 w-6 rounded-full object-cover"
+          />
+        ) : (
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-cyan-400 text-xs font-black text-black">
+            {initial}
+          </span>
+        )}
+        <span className="hidden text-sm font-bold text-cyan-500 sm:inline">
+          {displayName}
         </span>
-        <span className="hidden text-sm font-bold text-cyan-400 md:inline">
-          {user.name}
-        </span>
-        <ChevronDown
-          size={14}
-          className={`text-cyan-400 transition ${open ? "rotate-180" : ""}`}
-        />
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.98 }}
-            className="absolute right-0 top-14 w-60 overflow-hidden rounded-2xl border border-white/10 bg-[#0f172a] shadow-2xl"
+      {open && (
+        <div className="absolute right-0 top-12 z-50 w-56 overflow-hidden rounded-2xl border shadow-2xl
+                        border-slate-200 dark:border-white/10
+                        bg-white dark:bg-[#111827]">
+          <div className="border-b px-4 py-3 border-slate-100 dark:border-white/5">
+            <p className="text-sm font-bold text-black dark:text-white">
+              {displayName}
+            </p>
+            <p className="text-xs text-slate-500 truncate">{displayEmail}</p>
+          </div>
+
+          <button
+            onClick={() => {
+              setOpen(false);
+              router.push("/orders");
+            }}
+            className="flex w-full items-center gap-2 px-4 py-3 text-sm transition
+                       text-slate-700 dark:text-slate-300
+                       hover:bg-slate-50 dark:hover:bg-white/5"
           >
-            {/* Header */}
-            <div className="border-b border-white/5 p-4">
-              <p className="text-sm font-bold">{user.name}</p>
-              <p className="mt-0.5 truncate text-xs text-slate-500">
-                {user.email || `+91 ${user.phone}`}
-              </p>
-            </div>
+            <Package size={15} />
+            My Orders
+          </button>
 
-            {/* Items */}
-            <div className="p-2">
-              <button
-                onClick={() => {
-                  router.push("/wallet");
-                  setOpen(false);
-                }}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition hover:bg-white/5"
-              >
-                <Wallet size={16} className="text-cyan-400" />
-                My Wallet
-              </button>
+          <button
+            onClick={() => {
+              setOpen(false);
+              router.push("/wallet");
+            }}
+            className="flex w-full items-center gap-2 px-4 py-3 text-sm transition
+                       text-slate-700 dark:text-slate-300
+                       hover:bg-slate-50 dark:hover:bg-white/5"
+          >
+            <Wallet size={15} />
+            Wallet
+          </button>
 
-              <button
-                onClick={() => {
-                  router.push("/transaction");
-                  setOpen(false);
-                }}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition hover:bg-white/5"
-              >
-                <Package size={16} className="text-cyan-400" />
-                My Orders
-              </button>
+          <button
+            onClick={() => {
+              setOpen(false);
+              router.push("/profile");
+            }}
+            className="flex w-full items-center gap-2 px-4 py-3 text-sm transition
+                       text-slate-700 dark:text-slate-300
+                       hover:bg-slate-50 dark:hover:bg-white/5"
+          >
+            <UserIcon size={15} />
+            Profile
+          </button>
 
-              <button
-                onClick={() => {
-                  router.push("/account");
-                  setOpen(false);
-                }}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition hover:bg-white/5"
-              >
-                <User size={16} className="text-cyan-400" />
-                Account
-              </button>
-            </div>
-
-            {/* Logout */}
-            <div className="border-t border-white/5 p-2">
-              <button
-                onClick={handleLogout}
-                className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-red-400 transition hover:bg-red-500/10"
-              >
-                <LogOut size={16} />
-                Logout
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          <button
+            onClick={async () => {
+              setOpen(false);
+              if (onSignOut) await onSignOut();
+            }}
+            className="flex w-full items-center gap-2 border-t px-4 py-3 text-sm font-semibold text-rose-500 transition
+                       border-slate-100 dark:border-white/5
+                       hover:bg-rose-500/10"
+          >
+            <LogOut size={15} />
+            Sign out
+          </button>
+        </div>
+      )}
     </div>
   );
 }

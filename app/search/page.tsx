@@ -127,7 +127,7 @@ function SearchContent() {
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 md:px-6">
+    <main className="mx-auto w-full px-4 py-8 md:px-6">
       {/* BACK */}
       <button
         onClick={() => router.push("/")}
@@ -332,7 +332,7 @@ export default function SearchPage() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto max-w-7xl px-6 py-20 text-center">
+        <div className="mx-auto w-full px-6 py-20 text-center">
           <p className="text-slate-500">Loading search...</p>
         </div>
       }

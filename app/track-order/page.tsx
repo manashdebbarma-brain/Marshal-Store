@@ -57,7 +57,7 @@ export default function TrackOrderPage() {
   const isPaid = status !== "placed" || true; // Payment is received once order is placed
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10 md:px-6">
+    <main className="mx-auto w-full px-4 py-10 md:px-6">
       {/* Header */}
       <div className="mx-auto max-w-2xl text-center">
         <p className="text-sm font-bold uppercase tracking-widest text-cyan-400">

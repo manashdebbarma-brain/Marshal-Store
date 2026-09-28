@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 
 export default function HeroBanner() {
   return (
-    <section className="mx-auto mt-4 max-w-7xl overflow-hidden rounded-3xl border border-slate-200 dark:border-white/10">
+    <section className="mx-auto mt-4 w-full overflow-hidden rounded-3xl border border-slate-200 dark:border-white/10">
       <div className="relative h-[300px] bg-gradient-to-r from-[#062a3a] via-[#0b4a5a] to-[#06b6d4] md:h-[380px]">
         {/* BG glow */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(0,242,254,.35),transparent_45%),radial-gradient(circle_at_80%_70%,rgba(138,43,226,.35),transparent_45%)]" />

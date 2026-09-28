@@ -5,7 +5,7 @@ import { Zap, ChevronRight } from "lucide-react";
 
 export default function ExclusiveOffers() {
   return (
-    <section className="mx-auto max-w-7xl px-6 py-8">
+    <section className="mx-auto w-full px-6 py-8">
       <h2 className="mb-4 text-center text-xl font-black text-slate-900 dark:text-white">
         Exclusive Offers
       </h2>

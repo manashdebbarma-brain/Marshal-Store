@@ -29,14 +29,14 @@ export default function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <div className="h-10 w-10 rounded-xl border border-white/10 bg-white/5" />
+      <div className="h-10 w-10 rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5" />
     );
   }
 
   return (
     <button
       onClick={handleToggle}
-      className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-white/5 transition hover:bg-white/10"
+      className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 transition hover:bg-black/10 dark:hover:bg-white/10"
       aria-label="Toggle theme"
     >
       <AnimatePresence mode="wait" initial={false}>

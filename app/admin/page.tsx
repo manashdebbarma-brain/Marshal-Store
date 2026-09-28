@@ -162,14 +162,14 @@ export default function AdminDashboard() {
 
   if (!mounted) {
     return (
-      <main className="mx-auto max-w-7xl px-4 py-20 text-center">
+      <main className="mx-auto w-full px-4 py-20 text-center">
         <p className="text-slate-500">Loading dashboard...</p>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 md:px-6">
+    <main className="mx-auto w-full px-4 py-8 md:px-6">
       {/* =========================
           HERO HEADER
       ========================= */}

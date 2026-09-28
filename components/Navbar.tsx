@@ -11,14 +11,15 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 
 import { categories } from "@/lib/mockData";
 import { getAllProducts, AdminProduct } from "@/lib/productStore";
 import { getCartCount, getWalletBalance } from "@/lib/storage";
-import { getUser, type User as UserType } from "@/lib/auth";
 import { formatCurrency } from "@/lib/utils";
 import { seedWelcome } from "@/lib/notifications";
 import { initializeTheme } from "@/lib/theme";
+import { clearUser } from "@/lib/auth";
 
 import LoginModal from "@/components/LoginModal";
 import UserMenu from "@/components/UserMenu";
@@ -27,6 +28,16 @@ import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Navbar() {
   const router = useRouter();
+  const { data: session, status } = useSession();
+
+  // ✅ Real user comes from NextAuth session
+  const user = session?.user
+    ? {
+        name: session.user.name || "User",
+        email: session.user.email || "",
+        image: session.user.image || "",
+      }
+    : null;
 
   const [search, setSearch] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -34,17 +45,58 @@ export default function Navbar() {
   const [cartCount, setCartCount] = useState(0);
   const [walletBalance, setWalletBalance] = useState(0);
   const [loginOpen, setLoginOpen] = useState(false);
-  const [user, setUser] = useState<UserType | null>(null);
 
-  // ✅ Live products
   const [products, setProducts] = useState<AdminProduct[]>([]);
-
-  // Dropdown visibility
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // Refs for click-outside
   const searchWrapperRef = useRef<HTMLDivElement>(null);
   const categoryWrapperRef = useRef<HTMLDivElement>(null);
+
+  // ═══════════════════════════════════════════════════════════
+  // 📧 WELCOME EMAIL TRIGGER
+  // Sends once per user per browser (tracked in localStorage)
+  // ═══════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (!session?.user?.email || !session?.user?.name) return;
+
+    const key = `welcome-sent-${session.user.email}`;
+
+    // Skip if already sent on this browser
+    if (localStorage.getItem(key)) return;
+
+    // Mark as sent BEFORE sending to prevent duplicate fires
+    localStorage.setItem(key, "true");
+
+    fetch("/api/send-welcome", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: session.user.email,
+        name: session.user.name,
+      }),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          // Remove flag so it retries next time
+          localStorage.removeItem(key);
+          console.warn("Welcome email failed — will retry next visit");
+        } else {
+          console.log(`✅ Welcome email sent to ${session.user.email}`);
+        }
+      })
+      .catch((err) => {
+        localStorage.removeItem(key);
+        console.error("Welcome email fetch failed:", err);
+      });
+  }, [session]);
+
+  // Clean up any legacy fake user from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("marshal-store-user");
+      localStorage.removeItem("marshal_user");
+    }
+  }, []);
 
   useEffect(() => {
     initializeTheme();
@@ -53,7 +105,6 @@ export default function Navbar() {
     function refreshNavbar() {
       setCartCount(getCartCount());
       setWalletBalance(getWalletBalance());
-      setUser(getUser());
       setProducts(getAllProducts());
     }
 
@@ -62,19 +113,16 @@ export default function Navbar() {
     window.addEventListener("storage", refreshNavbar);
     window.addEventListener("cart-updated", refreshNavbar);
     window.addEventListener("wallet-updated", refreshNavbar);
-    window.addEventListener("user-updated", refreshNavbar);
     window.addEventListener("products-updated", refreshNavbar);
 
     return () => {
       window.removeEventListener("storage", refreshNavbar);
       window.removeEventListener("cart-updated", refreshNavbar);
       window.removeEventListener("wallet-updated", refreshNavbar);
-      window.removeEventListener("user-updated", refreshNavbar);
       window.removeEventListener("products-updated", refreshNavbar);
     };
   }, []);
 
-  // ✅ Click outside to close dropdowns
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (
@@ -95,12 +143,11 @@ export default function Navbar() {
       document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ✅ Smarter search ranking
   const searchResults = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return [];
 
-    const scored = products
+    return products
       .map((p) => {
         const name = p.name.toLowerCase();
         const publisher = p.publisher.toLowerCase();
@@ -108,30 +155,11 @@ export default function Navbar() {
         const description = p.description.toLowerCase();
 
         let score = 0;
-
-        // Exact name match
         if (name === q) score += 100;
-
-        // Name starts with query
         else if (name.startsWith(q)) score += 80;
-
-        // Any word in name starts with query
-        else if (
-          name.split(/\s+/).some((word) => word.startsWith(q))
-        )
-          score += 60;
-
-        // Name includes query
+        else if (name.split(/\s+/).some((word) => word.startsWith(q))) score += 60;
         else if (name.includes(q)) score += 40;
-
-        // Publisher/category match
-        else if (
-          publisher.includes(q) ||
-          category.includes(q)
-        )
-          score += 20;
-
-        // Description includes (weakest)
+        else if (publisher.includes(q) || category.includes(q)) score += 20;
         else if (description.includes(q)) score += 5;
 
         return { product: p, score };
@@ -140,11 +168,8 @@ export default function Navbar() {
       .sort((a, b) => b.score - a.score)
       .slice(0, 5)
       .map((r) => r.product);
-
-    return scored;
   }, [search, products]);
 
-  // Show dropdown only when typing AND results exist
   useEffect(() => {
     setShowDropdown(search.trim().length > 0);
   }, [search]);
@@ -170,10 +195,24 @@ export default function Navbar() {
     setMobileOpen(false);
   }
 
+  // ✅ Real sign-out
+  async function handleSignOut() {
+    try {
+      clearUser();
+      await signOut({ callbackUrl: "/" });
+    } catch (err) {
+      console.error("Sign-out failed:", err);
+    }
+  }
+
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-white/10 bg-[#0a0f1d]/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 md:px-6">
+      <header className="sticky top-0 z-50 border-b transition-colors
+                         bg-white/95 dark:bg-[#0a0f1d]/90
+                         border-slate-200 dark:border-white/10
+                         backdrop-blur-xl">
+        <div className="flex h-16 w-full items-center gap-4 px-4 md:px-6 lg:px-10">
+
           {/* LOGO */}
           <button
             onClick={() => router.push("/")}
@@ -184,21 +223,19 @@ export default function Navbar() {
               alt="Marshal Store"
               className="h-16 w-auto object-contain"
               onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display =
-                  "none";
+                (e.currentTarget as HTMLImageElement).style.display = "none";
               }}
             />
-            <span className="hidden text-xl font-black tracking-tight sm:inline">
+            <span className="hidden text-xl font-black tracking-tight sm:inline text-black dark:text-white">
               Marshal<span className="text-cyan-400">Store</span>
             </span>
           </button>
 
           {/* Desktop Search */}
-          <div
-            ref={searchWrapperRef}
-            className="relative hidden flex-1 md:block"
-          >
-            <div className="flex items-center rounded-xl border border-white/10 bg-white/5">
+          <div ref={searchWrapperRef} className="relative hidden flex-1 md:block">
+            <div className="flex items-center rounded-xl border transition-colors
+                            border-slate-200 dark:border-white/10
+                            bg-slate-100 dark:bg-white/5">
               <Search size={18} className="ml-4 text-slate-500" />
               <input
                 value={search}
@@ -208,16 +245,19 @@ export default function Navbar() {
                 }}
                 onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
                 placeholder="Search games, gift cards..."
-                className="w-full bg-transparent px-3 py-3 text-sm text-white outline-none placeholder:text-slate-500"
+                className="w-full bg-transparent px-3 py-3 text-sm outline-none
+                           text-black dark:text-white
+                           placeholder:text-slate-500"
               />
             </div>
 
-            {/* ✅ Animated Dropdown */}
             {showDropdown && (
-              <div className="absolute left-0 right-0 top-14 z-50 overflow-hidden rounded-2xl border border-white/10 bg-[#111827] shadow-2xl">
+              <div className="absolute left-0 right-0 top-14 z-50 overflow-hidden rounded-2xl border shadow-2xl
+                              border-slate-200 dark:border-white/10
+                              bg-white dark:bg-[#111827]">
                 {searchResults.length === 0 ? (
                   <div className="p-6 text-center">
-                    <p className="text-sm font-semibold text-slate-400">
+                    <p className="text-sm font-semibold text-slate-500">
                       No results for &ldquo;{search}&rdquo;
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
@@ -230,19 +270,22 @@ export default function Navbar() {
                       <button
                         key={p.id}
                         onClick={() => handleSelectProduct(p.slug)}
-                        className={`flex w-full items-center justify-between border-b border-white/5 px-4 py-3 text-left transition hover:bg-white/5 ${
-                          i === 0 ? "bg-white/[0.02]" : ""
+                        className={`flex w-full items-center justify-between border-b px-4 py-3 text-left transition
+                                    border-slate-100 dark:border-white/5
+                                    hover:bg-slate-50 dark:hover:bg-white/5 ${
+                          i === 0 ? "bg-slate-50/50 dark:bg-white/[0.02]" : ""
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-gradient-to-br from-slate-800 to-slate-900">
+                          <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg
+                                          bg-gradient-to-br from-slate-200 to-slate-300
+                                          dark:from-slate-800 dark:to-slate-900">
                             <img
                               src={`/games/${p.slug}.jpg`}
                               alt={p.name}
                               className="h-full w-full object-cover"
                               onError={(e) => {
-                                const img =
-                                  e.currentTarget as HTMLImageElement;
+                                const img = e.currentTarget as HTMLImageElement;
                                 img.style.display = "none";
                                 const parent = img.parentElement!;
                                 if (!parent.dataset.initialed) {
@@ -253,7 +296,7 @@ export default function Navbar() {
                             />
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-white">
+                            <p className="text-sm font-bold text-black dark:text-white">
                               {p.name}
                             </p>
                             <p className="mt-0.5 text-[11px] text-slate-500">
@@ -261,7 +304,7 @@ export default function Navbar() {
                             </p>
                           </div>
                         </div>
-                        <span className="text-xs font-semibold text-cyan-400">
+                        <span className="text-xs font-semibold text-cyan-500">
                           View
                         </span>
                       </button>
@@ -269,7 +312,9 @@ export default function Navbar() {
 
                     <button
                       onClick={handleSearchSubmit}
-                      className="w-full border-t border-white/5 bg-cyan-400/5 px-4 py-3 text-center text-xs font-bold text-cyan-400 transition hover:bg-cyan-400/10"
+                      className="w-full border-t px-4 py-3 text-center text-xs font-bold text-cyan-500 transition
+                                 border-slate-100 dark:border-white/5
+                                 bg-cyan-400/5 hover:bg-cyan-400/10"
                     >
                       View all results for &ldquo;{search}&rdquo; →
                     </button>
@@ -281,30 +326,33 @@ export default function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden items-center gap-2 lg:flex">
-            {/* Categories */}
             <div ref={categoryWrapperRef} className="relative">
               <button
                 onClick={() => setCategoryOpen(!categoryOpen)}
-                className="flex items-center gap-1 rounded-xl px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/5 hover:text-white"
+                className="flex items-center gap-1 rounded-xl px-3 py-2 text-sm font-semibold transition
+                           text-slate-700 dark:text-slate-300
+                           hover:bg-slate-100 dark:hover:bg-white/5
+                           hover:text-black dark:hover:text-white"
               >
                 Categories
                 <ChevronDown
                   size={15}
-                  className={
-                    categoryOpen ? "rotate-180 transition" : "transition"
-                  }
+                  className={categoryOpen ? "rotate-180 transition" : "transition"}
                 />
               </button>
 
               {categoryOpen && (
-                <div className="absolute right-0 top-12 w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-2 shadow-2xl">
+                <div className="absolute right-0 top-12 w-64 overflow-hidden rounded-2xl border p-2 shadow-2xl
+                                border-slate-200 dark:border-white/10
+                                bg-white dark:bg-[#111827]">
                   {categories.map((cat) => (
                     <button
                       key={cat.id}
                       onClick={() => openCategory(cat.id)}
-                      className="w-full rounded-xl px-4 py-3 text-left transition hover:bg-white/5"
+                      className="w-full rounded-xl px-4 py-3 text-left transition
+                                 hover:bg-slate-100 dark:hover:bg-white/5"
                     >
-                      <p className="text-sm font-bold text-white">
+                      <p className="text-sm font-bold text-black dark:text-white">
                         {cat.name}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
@@ -318,7 +366,10 @@ export default function Navbar() {
 
             <button
               onClick={() => router.push("/track-order")}
-              className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-300 transition hover:bg-white/5 hover:text-white"
+              className="rounded-xl px-3 py-2 text-sm font-semibold transition
+                         text-slate-700 dark:text-slate-300
+                         hover:bg-slate-100 dark:hover:bg-white/5
+                         hover:text-black dark:hover:text-white"
             >
               Track Order
             </button>
@@ -327,12 +378,15 @@ export default function Navbar() {
 
             <button
               onClick={() => router.push("/wallet")}
-              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 transition hover:bg-white/10"
+              className="flex items-center gap-2 rounded-xl border px-3 py-2 transition
+                         border-slate-200 dark:border-white/10
+                         bg-slate-100 dark:bg-white/5
+                         hover:bg-slate-200 dark:hover:bg-white/10"
             >
-              <Wallet size={16} className="text-cyan-400" />
+              <Wallet size={16} className="text-cyan-500" />
               <div className="leading-none">
                 <p className="text-[10px] text-slate-500">Wallet</p>
-                <p className="mt-1 text-xs font-bold text-white">
+                <p className="mt-1 text-xs font-bold text-black dark:text-white">
                   {formatCurrency(walletBalance)}
                 </p>
               </div>
@@ -342,7 +396,11 @@ export default function Navbar() {
 
             <button
               onClick={() => router.push("/cart")}
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 transition hover:bg-white/10"
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl border transition
+                         border-slate-200 dark:border-white/10
+                         bg-slate-100 dark:bg-white/5
+                         hover:bg-slate-200 dark:hover:bg-white/10
+                         text-black dark:text-white"
               aria-label="Open cart"
             >
               <ShoppingCart size={18} />
@@ -353,12 +411,23 @@ export default function Navbar() {
               )}
             </button>
 
-            {user ? (
-              <UserMenu />
+            {/* ✅ Real user display */}
+            {status === "loading" ? (
+              <div className="h-10 w-24 animate-pulse rounded-xl bg-slate-200 dark:bg-white/5" />
+            ) : user ? (
+              <UserMenu
+                user={{
+                  name: user.name,
+                  email: user.email,
+                  image: user.image,
+                }}
+                onSignOut={handleSignOut}
+              />
             ) : (
               <button
                 onClick={() => setLoginOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl border border-cyan-400/40 bg-cyan-400/5 px-3 py-2 text-sm font-bold text-cyan-400 transition hover:bg-cyan-400/10"
+                className="flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-bold text-cyan-500 transition
+                           border-cyan-400/40 bg-cyan-400/5 hover:bg-cyan-400/10"
               >
                 <User size={15} />
                 Login
@@ -369,22 +438,26 @@ export default function Navbar() {
           {/* Mobile Actions */}
           <div className="ml-auto flex items-center gap-2 lg:hidden">
             <ThemeToggle />
-
             <NotificationsDropdown />
 
             <button
               onClick={() => router.push("/wallet")}
-              className="flex h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3"
+              className="flex h-10 items-center gap-2 rounded-xl border px-3
+                         border-slate-200 dark:border-white/10
+                         bg-slate-100 dark:bg-white/5"
             >
-              <Wallet size={17} className="text-cyan-400" />
-              <span className="text-xs font-bold text-white">
+              <Wallet size={17} className="text-cyan-500" />
+              <span className="text-xs font-bold text-black dark:text-white">
                 {formatCurrency(walletBalance)}
               </span>
             </button>
 
             <button
               onClick={() => router.push("/cart")}
-              className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5"
+              className="relative flex h-10 w-10 items-center justify-center rounded-xl border
+                         border-slate-200 dark:border-white/10
+                         bg-slate-100 dark:bg-white/5
+                         text-black dark:text-white"
             >
               <ShoppingCart size={18} />
               {cartCount > 0 && (
@@ -396,7 +469,10 @@ export default function Navbar() {
 
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border
+                         border-slate-200 dark:border-white/10
+                         bg-slate-100 dark:bg-white/5
+                         text-black dark:text-white"
             >
               {mobileOpen ? <X size={19} /> : <Menu size={19} />}
             </button>
@@ -405,32 +481,45 @@ export default function Navbar() {
 
         {/* Mobile Menu */}
         {mobileOpen && (
-          <div className="border-t border-white/10 bg-[#0a0f1d] px-4 py-4 lg:hidden">
-            <div className="mb-3 flex items-center rounded-xl border border-white/10 bg-white/5">
+          <div className="border-t px-4 py-4 lg:hidden
+                          border-slate-200 dark:border-white/10
+                          bg-white dark:bg-[#0a0f1d]">
+            <div className="mb-3 flex items-center rounded-xl border
+                            border-slate-200 dark:border-white/10
+                            bg-slate-100 dark:bg-white/5">
               <Search size={16} className="ml-3 text-slate-500" />
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && handleSearchSubmit()
-                }
+                onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
                 placeholder="Search games, gift cards..."
-                className="w-full bg-transparent px-3 py-3 text-sm text-white outline-none placeholder:text-slate-500"
+                className="w-full bg-transparent px-3 py-3 text-sm outline-none
+                           text-black dark:text-white
+                           placeholder:text-slate-500"
               />
             </div>
 
             <div className="mb-3">
-              {user ? (
+              {status === "loading" ? (
+                <div className="h-14 animate-pulse rounded-xl bg-slate-100 dark:bg-white/5" />
+              ) : user ? (
                 <div className="flex items-center justify-between rounded-xl border border-cyan-400/30 bg-cyan-400/5 px-4 py-3">
                   <div>
-                    <p className="text-sm font-bold text-white">
+                    <p className="text-sm font-bold text-black dark:text-white">
                       {user.name}
                     </p>
                     <p className="text-xs text-slate-500">
-                      {user.email || `+91 ${user.phone}`}
+                      {user.email}
                     </p>
                   </div>
-                  <UserMenu />
+                  <UserMenu
+                    user={{
+                      name: user.name,
+                      email: user.email,
+                      image: user.image,
+                    }}
+                    onSignOut={handleSignOut}
+                  />
                 </div>
               ) : (
                 <button
@@ -450,7 +539,9 @@ export default function Navbar() {
                 router.push("/track-order");
                 setMobileOpen(false);
               }}
-              className="w-full rounded-xl px-4 py-3 text-left text-sm font-semibold hover:bg-white/5"
+              className="w-full rounded-xl px-4 py-3 text-left text-sm font-semibold
+                         hover:bg-slate-100 dark:hover:bg-white/5
+                         text-black dark:text-white"
             >
               Track Order
             </button>
@@ -463,7 +554,9 @@ export default function Navbar() {
               <button
                 key={cat.id}
                 onClick={() => openCategory(cat.id)}
-                className="w-full rounded-xl px-4 py-3 text-left text-sm font-semibold hover:bg-white/5"
+                className="w-full rounded-xl px-4 py-3 text-left text-sm font-semibold
+                           hover:bg-slate-100 dark:hover:bg-white/5
+                           text-black dark:text-white"
               >
                 {cat.name}
               </button>

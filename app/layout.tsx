@@ -6,6 +6,8 @@ import SocialBar from "@/components/SocialBar";
 import ToastContainer from "@/components/Toast";
 import PageTransition from "@/components/PageTransition";
 import Footer from "@/components/Footer";
+import WelcomePopup from "@/components/WelcomePopup";
+import Providers from "@/components/Providers"; // 👈 ADDED
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -35,17 +37,23 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Navbar />
-        <main className="min-h-screen">
-          <PageTransition>{children}</PageTransition>
-        </main>
+        {/* 👇 SessionProvider wraps everything so useSession() works everywhere */}
+        <Providers>
+          <Navbar />
+          <main className="min-h-screen">
+            <PageTransition>{children}</PageTransition>
+          </main>
 
-        {/* 👇 New Footer with Admin Access button */}
-        <Footer />
+          {/* Footer with Admin Access button */}
+          <Footer />
 
-        <WhatsAppFloat />
-        <SocialBar />
-        <ToastContainer />
+          <WhatsAppFloat />
+          <SocialBar />
+          <ToastContainer />
+
+          {/* Welcome Popup shows on first visit each day */}
+          <WelcomePopup />
+        </Providers>
       </body>
     </html>
   );

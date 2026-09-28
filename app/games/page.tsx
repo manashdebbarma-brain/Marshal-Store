@@ -28,7 +28,7 @@ const GAMES = [
 
 export default function GamesCatalog() {
   return (
-    <div className="max-w-6xl mx-auto p-6 text-white mt-10">
+    <div className="w-full mx-auto p-6 text-white mt-10">
       <div className="mb-8">
         <h1 className="text-3xl font-extrabold tracking-tight">Popular Games</h1>
         <p className="text-slate-400 text-sm mt-1">Select a game to instantly top up diamonds & UC.</p>

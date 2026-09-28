@@ -46,7 +46,7 @@ function HomeContent() {
 
   if (!mounted) {
     return (
-      <div className="mx-auto max-w-7xl px-6 py-20 text-center">
+      <div className="w-full px-4 sm:px-6 lg:px-10 py-20 text-center">
         <p className="text-slate-500">Loading store...</p>
       </div>
     );
@@ -59,7 +59,7 @@ function HomeContent() {
       <CategoryRow />
 
       {/* FEATURES */}
-      <section className="mx-auto max-w-7xl px-6 pt-6">
+      <section className="w-full px-4 sm:px-6 lg:px-10 pt-6">
         <div className="grid gap-3 md:grid-cols-3">
           {[
             {
@@ -88,7 +88,7 @@ function HomeContent() {
       </section>
 
       {/* PRODUCTS */}
-      <section className="mx-auto max-w-7xl px-6 py-14">
+      <section className="w-full px-4 sm:px-6 lg:px-10 py-14">
         <div className="mb-8">
           <p className="text-sm font-semibold uppercase tracking-widest text-cyan-400">
             Marketplace
@@ -110,7 +110,7 @@ function HomeContent() {
               className={`whitespace-nowrap rounded-full border px-4 py-2 text-sm transition ${
                 category.id === parentId
                   ? "border-cyan-400/50 bg-cyan-400/10 text-cyan-400"
-                  : "border-white/10 bg-white/5 text-slate-400 hover:bg-white/10"
+                  : "border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10"
               }`}
             >
               {category.name}
@@ -126,7 +126,8 @@ function HomeContent() {
             </p>
           </div>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          // 👇 Expanded to 6 columns on XL screens
+          <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
             {filteredProducts.map((product, index) => (
               <motion.div
                 key={product.id}
@@ -137,15 +138,18 @@ function HomeContent() {
               >
                 <Link
                   href={`/topup/${product.slug}`}
-                  className="group block overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] transition hover:-translate-y-1 hover:border-cyan-400/40 hover:shadow-lg hover:shadow-cyan-500/10"
+                  className="group block overflow-hidden rounded-2xl border transition
+                             border-slate-200 dark:border-white/10
+                             bg-white dark:bg-white/[0.03]
+                             hover:-translate-y-1 hover:border-cyan-400/40 hover:shadow-lg hover:shadow-cyan-500/10"
                 >
-                  <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900">
-                    {/* Fallback initials — always behind the image */}
-                    <div className="absolute inset-0 flex items-center justify-center text-6xl font-black text-white/10">
+                  <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900">
+                    {/* Fallback initials */}
+                    <div className="absolute inset-0 flex items-center justify-center text-6xl font-black text-black/5 dark:text-white/10">
                       {product.name.substring(0, 2)}
                     </div>
 
-                    {/* Game logo — tries multiple extensions */}
+                    {/* Game logo */}
                     <img
                       src={`/games/${product.slug}.jpg`}
                       alt={product.name}
@@ -213,7 +217,7 @@ export default function HomePage() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto max-w-7xl px-6 py-20 text-center">
+        <div className="w-full px-4 sm:px-6 lg:px-10 py-20 text-center">
           <p className="text-slate-500">Loading store...</p>
         </div>
       }

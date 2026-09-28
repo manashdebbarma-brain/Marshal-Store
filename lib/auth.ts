@@ -3,10 +3,12 @@ export type User = {
   name: string;
   phone?: string;
   email?: string;
+  image?: string;
   provider: "google" | "phone";
   loggedInAt: string;
 };
 
+// ⚠️ This storage is only used as a UI cache. Real auth comes from NextAuth.
 const USER_KEY = "marshal-store-user";
 
 export function getUser(): User | null {
@@ -24,60 +26,31 @@ export function getUser(): User | null {
 
 export function setUser(user: User) {
   if (typeof window === "undefined") return;
-
   localStorage.setItem(USER_KEY, JSON.stringify(user));
   window.dispatchEvent(new Event("user-updated"));
 }
 
 export function clearUser() {
   if (typeof window === "undefined") return;
-
   localStorage.removeItem(USER_KEY);
+  localStorage.removeItem("marshal_user"); // clean up old key if present
+  localStorage.removeItem("user");
+  localStorage.removeItem("auth");
   window.dispatchEvent(new Event("user-updated"));
 }
 
-/* =========================
-   MOCK LOGIN PROVIDERS
-========================= */
-
-export function loginWithGoogle(name = "Acer"): User {
-  const user: User = {
-    id: `G-${Date.now()}`,
-    name,
-    email: `${name.toLowerCase()}@gmail.com`,
-    provider: "google",
-    loggedInAt: new Date().toISOString(),
-  };
-
-  setUser(user);
-  return user;
-}
-
-export function loginWithPhone(
-  phone: string,
-  name = "Acer"
-): User {
-  const user: User = {
-    id: `P-${Date.now()}`,
-    name,
-    phone,
-    provider: "phone",
-    loggedInAt: new Date().toISOString(),
-  };
-
-  setUser(user);
-  return user;
+export function updateUserName(name: string) {
+  const user = getUser();
+  if (!user) return null;
+  const updated: User = { ...user, name };
+  setUser(updated);
+  return updated;
 }
 
 /* =========================
-   MOCK OTP
+   MOCK OTP (for phone demo only)
 ========================= */
 
-/**
- * In a real app this hits your backend.
- * For demo purposes we generate a 6-digit code
- * and log it to the console so you can test.
- */
 export function sendOtp(phone: string): string {
   const otp = String(Math.floor(100000 + Math.random() * 900000));
   console.log(
@@ -89,12 +62,4 @@ export function sendOtp(phone: string): string {
 
 export function verifyOtp(input: string, expected: string): boolean {
   return input.trim() === expected;
-}
-export function updateUserName(name: string) {
-  const user = getUser();
-  if (!user) return null;
-
-  const updated: User = { ...user, name };
-  setUser(updated);
-  return updated;
 }

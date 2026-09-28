@@ -73,7 +73,7 @@ export default function TransactionPage() {
   ];
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 md:px-6">
+    <main className="mx-auto w-full px-4 py-8 md:px-6">
       {/* BACK */}
       <button
         onClick={() => router.push("/")}

@@ -159,7 +159,7 @@ export default function CartPage() {
 
   if (!mounted) {
     return (
-      <main className="mx-auto max-w-5xl px-4 py-20 text-center">
+      <main className="mx-auto w-full px-4 py-20 text-center">
         <p className="text-slate-500">Loading cart...</p>
       </main>
     );
@@ -167,7 +167,7 @@ export default function CartPage() {
 
   return (
     <>
-      <main className="mx-auto max-w-6xl px-4 py-8 md:px-6">
+      <main className="mx-auto w-full px-4 py-8 md:px-6">
         {/* BACK */}
         <button
           onClick={() => router.push("/")}

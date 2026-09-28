@@ -123,7 +123,7 @@ export default function NewProductPage() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 md:px-6">
+    <main className="mx-auto w-full px-4 py-8 md:px-6">
       {/* HEADER */}
       <div className="mb-8 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">

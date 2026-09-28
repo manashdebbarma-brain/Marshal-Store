@@ -219,7 +219,7 @@ export default function EditProductPage() {
 
   if (notFound) {
     return (
-      <main className="mx-auto max-w-5xl px-4 py-16 text-center">
+      <main className="mx-auto w-full px-4 py-16 text-center">
         <h1 className="text-3xl font-black">Product Not Found</h1>
         <p className="mt-3 text-slate-500">
           The product you're trying to edit doesn't exist.
@@ -237,7 +237,7 @@ export default function EditProductPage() {
   if (!originalProduct) return null;
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 md:px-6">
+    <main className="mx-auto w-full px-4 py-8 md:px-6">
       {/* HEADER */}
       <div className="mb-8 flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">

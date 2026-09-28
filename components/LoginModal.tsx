@@ -16,13 +16,9 @@ import {
   EyeOff,
   Users,
 } from "lucide-react";
+import { signIn } from "next-auth/react";
 
-import {
-  loginWithGoogle,
-  loginWithPhone,
-  sendOtp,
-  verifyOtp,
-} from "@/lib/auth";
+import { sendOtp, verifyOtp } from "@/lib/auth";
 import { adminLogin } from "@/lib/admin";
 import { toast } from "@/components/Toast";
 
@@ -54,14 +50,12 @@ export default function LoginModal({
   const [adminLoading, setAdminLoading] = useState(false);
   const [adminShake, setAdminShake] = useState(false);
 
-  /* Resend countdown */
   useEffect(() => {
     if (resendIn <= 0) return;
     const timer = setTimeout(() => setResendIn(resendIn - 1), 1000);
     return () => clearTimeout(timer);
   }, [resendIn]);
 
-  /* Reset everything when closed */
   useEffect(() => {
     if (!open) {
       setTimeout(() => {
@@ -78,18 +72,24 @@ export default function LoginModal({
     }
   }, [open]);
 
-  /* Customer: Google login */
-  function handleGoogleLogin() {
+  /* ✅ Customer: Real Google login via NextAuth */
+  async function handleGoogleLogin() {
     setLoading(true);
-    setTimeout(() => {
-      const user = loginWithGoogle("Acer");
-      toast(`Welcome, ${user.name}!`, "success");
-      setLoading(false);
+    try {
+      await signIn("google", {
+        callbackUrl: "/",
+        prompt: "select_account", // always show account chooser
+      });
+      // Note: signIn redirects the browser, so code below may not run
       onClose();
-    }, 700);
+    } catch (err) {
+      console.error("Google login failed:", err);
+      toast("Google login failed. Please try again.", "error");
+      setLoading(false);
+    }
   }
 
-  /* Customer: Send OTP */
+  /* Customer: Send OTP (demo) */
   function handleSendOtp() {
     const clean = phone.replace(/\D/g, "");
     if (clean.length !== 10) {
@@ -103,7 +103,7 @@ export default function LoginModal({
     toast("OTP generated (demo mode)", "success");
   }
 
-  /* Customer: Verify OTP */
+  /* Customer: Verify OTP (demo) */
   function handleVerifyOtp() {
     if (otp.trim().length !== 6) {
       toast("Enter the 6-digit OTP", "error");
@@ -114,15 +114,14 @@ export default function LoginModal({
       return;
     }
     setLoading(true);
+    // ⚠️ Phone auth isn't wired to NextAuth yet.
+    // For now, show a message; in production, add a phone credentials provider.
     setTimeout(() => {
-      const user = loginWithPhone(phone, "Acer");
-      toast(`Welcome, ${user.name}!`, "success");
       setLoading(false);
-      onClose();
+      toast("Phone login coming soon. Please use Google.", "info");
     }, 600);
   }
 
-  /* Customer: Resend OTP */
   function handleResend() {
     const code = sendOtp(phone);
     setExpectedOtp(code);
@@ -131,7 +130,6 @@ export default function LoginModal({
     toast("OTP regenerated", "success");
   }
 
-  /* Admin: Login — with ?from= handling */
   function handleAdminLogin(e: React.FormEvent) {
     e.preventDefault();
     setAdminLoading(true);
@@ -141,8 +139,6 @@ export default function LoginModal({
       if (success) {
         toast("Welcome, Admin!", "success");
         onClose();
-
-        // ✅ Redirect to ?from= target or /admin
         const params = new URLSearchParams(window.location.search);
         const from = params.get("from") || "/admin";
         router.push(from);
@@ -172,37 +168,37 @@ export default function LoginModal({
             exit={{ scale: 0.95, y: 30, opacity: 0 }}
             transition={{ type: "spring", stiffness: 260, damping: 22 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-[#0f172a] p-6 shadow-2xl md:p-8"
+            className="relative w-full max-w-md overflow-hidden rounded-3xl border p-6 shadow-2xl md:p-8
+                       bg-white dark:bg-[#0f172a]
+                       border-slate-200 dark:border-white/10"
           >
-            {/* Close button */}
             <button
               onClick={onClose}
-              className="absolute right-4 top-4 z-10 text-slate-500 transition hover:text-white"
+              className="absolute right-4 top-4 z-10 text-slate-500 transition hover:text-black dark:hover:text-white"
               aria-label="Close"
             >
               <X size={20} />
             </button>
 
-            {/* Back button (only in OTP / Password views) */}
             {tab === "customer" && view !== "options" && (
               <button
                 onClick={() => setView("options")}
-                className="absolute left-4 top-4 flex items-center gap-1 text-xs font-semibold text-slate-500 transition hover:text-white"
+                className="absolute left-4 top-4 flex items-center gap-1 text-xs font-semibold text-slate-500 transition hover:text-black dark:hover:text-white"
               >
                 <ArrowLeft size={14} /> Back
               </button>
             )}
 
-            {/* =========================
-                TAB SWITCHER
-            ========================= */}
-            <div className="mb-6 flex rounded-xl border border-white/10 bg-white/[0.03] p-1">
+            {/* TAB SWITCHER */}
+            <div className="mb-6 flex rounded-xl border p-1
+                            border-slate-200 dark:border-white/10
+                            bg-slate-100 dark:bg-white/[0.03]">
               <button
                 onClick={() => setTab("customer")}
                 className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-bold uppercase tracking-widest transition ${
                   tab === "customer"
                     ? "bg-cyan-400 text-black"
-                    : "text-slate-500 hover:text-white"
+                    : "text-slate-500 hover:text-black dark:hover:text-white"
                 }`}
               >
                 <Users size={13} />
@@ -213,7 +209,7 @@ export default function LoginModal({
                 className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-bold uppercase tracking-widest transition ${
                   tab === "admin"
                     ? "bg-cyan-400 text-black"
-                    : "text-slate-500 hover:text-white"
+                    : "text-slate-500 hover:text-black dark:hover:text-white"
                 }`}
               >
                 <ShieldCheck size={13} />
@@ -221,81 +217,68 @@ export default function LoginModal({
               </button>
             </div>
 
-            {/* =========================
-                CUSTOMER TAB
-            ========================= */}
+            {/* CUSTOMER TAB */}
             {tab === "customer" && (
               <>
-                {/* VIEW: OPTIONS */}
                 {view === "options" && (
                   <div>
                     <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-cyan-400/10 text-cyan-400">
                       <ShieldCheck size={26} />
                     </div>
 
-                    <h2 className="text-center text-2xl font-black">
+                    <h2 className="text-center text-2xl font-black text-black dark:text-white">
                       Welcome Back
                     </h2>
                     <p className="mt-1 text-center text-sm text-slate-500">
                       Login to continue shopping
                     </p>
 
-                    {/* Google */}
+                    {/* ✅ REAL Google login */}
                     <button
                       onClick={handleGoogleLogin}
                       disabled={loading}
-                      className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-white px-5 py-3.5 font-bold text-slate-900 transition hover:scale-[1.01] disabled:opacity-50"
+                      className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl bg-white px-5 py-3.5 font-bold text-slate-900 transition hover:scale-[1.01] disabled:opacity-50 border border-slate-200"
                     >
                       {loading ? (
                         <Loader2 size={18} className="animate-spin" />
                       ) : (
                         <svg viewBox="0 0 24 24" className="h-5 w-5">
-                          <path
-                            fill="#4285F4"
-                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                          />
-                          <path
-                            fill="#34A853"
-                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                          />
-                          <path
-                            fill="#FBBC05"
-                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                          />
-                          <path
-                            fill="#EA4335"
-                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                          />
+                          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                         </svg>
                       )}
-                      {loading ? "Signing in..." : "Sign in with Google"}
+                      {loading ? "Redirecting..." : "Sign in with Google"}
                     </button>
 
-                    {/* Divider */}
                     <div className="my-6 flex items-center gap-3 text-xs font-bold text-slate-500">
-                      <div className="h-px flex-1 bg-white/10" />
+                      <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
                       OR
-                      <div className="h-px flex-1 bg-white/10" />
+                      <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
                     </div>
 
                     <p className="mb-3 text-xs font-bold uppercase tracking-widest text-slate-500">
                       Login with OTP
                     </p>
 
-                    <div className="flex items-center rounded-xl border border-white/10 bg-white/5 focus-within:border-cyan-400/50">
-                      <span className="border-r border-white/10 px-3 py-3 text-sm font-bold text-slate-400">
+                    <div className="flex items-center rounded-xl border focus-within:border-cyan-400/50
+                                    border-slate-200 dark:border-white/10
+                                    bg-slate-50 dark:bg-white/5">
+                      <span className="border-r px-3 py-3 text-sm font-bold text-slate-400
+                                       border-slate-200 dark:border-white/10">
                         +91
                       </span>
                       <input
                         value={phone}
                         onChange={(e) =>
-                          setPhone(
-                            e.target.value.replace(/\D/g, "").slice(0, 10)
-                          )
+                          setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
                         }
                         placeholder="Enter mobile number"
                         inputMode="numeric"
-                        className="w-full bg-transparent px-3 py-3 text-sm text-white outline-none placeholder:text-slate-500"
+                        className="w-full bg-transparent px-3 py-3 text-sm outline-none
+                                   text-black dark:text-white
+                                   placeholder:text-slate-500"
                       />
                     </div>
 
@@ -328,10 +311,9 @@ export default function LoginModal({
                   </div>
                 )}
 
-                {/* VIEW: OTP */}
                 {view === "otp" && (
                   <div className="pt-8">
-                    <h2 className="text-center text-2xl font-black">
+                    <h2 className="text-center text-2xl font-black text-black dark:text-white">
                       Verify OTP
                     </h2>
                     <p className="mt-1 text-center text-sm text-slate-500">
@@ -341,7 +323,6 @@ export default function LoginModal({
                       </span>
                     </p>
 
-                    {/* ✅ DEMO OTP DISPLAY */}
                     <div className="mt-6 rounded-2xl border border-cyan-400/30 bg-cyan-400/10 p-4 text-center">
                       <p className="text-[10px] font-bold uppercase tracking-widest text-cyan-400">
                         🧪 Demo Mode — Your OTP
@@ -361,13 +342,14 @@ export default function LoginModal({
                       <input
                         value={otp}
                         onChange={(e) =>
-                          setOtp(
-                            e.target.value.replace(/\D/g, "").slice(0, 6)
-                          )
+                          setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
                         }
                         placeholder="••••••"
                         inputMode="numeric"
-                        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-4 text-center text-2xl font-black tracking-[0.5em] text-white outline-none transition focus:border-cyan-400/50"
+                        className="w-full rounded-xl border px-4 py-4 text-center text-2xl font-black tracking-[0.5em] outline-none transition focus:border-cyan-400/50
+                                   border-slate-200 dark:border-white/10
+                                   bg-slate-50 dark:bg-white/5
+                                   text-black dark:text-white"
                       />
                     </div>
 
@@ -395,16 +377,15 @@ export default function LoginModal({
                           Verifying...
                         </>
                       ) : (
-                        "Verify OTP & Login"
+                        "Verify OTP"
                       )}
                     </button>
                   </div>
                 )}
 
-                {/* VIEW: PASSWORD */}
                 {view === "password" && (
                   <div className="pt-8">
-                    <h2 className="text-center text-2xl font-black">
+                    <h2 className="text-center text-2xl font-black text-black dark:text-white">
                       Login with Password
                     </h2>
                     <p className="mt-1 text-center text-sm text-slate-500">
@@ -412,9 +393,7 @@ export default function LoginModal({
                     </p>
 
                     <button
-                      onClick={() =>
-                        toast("Password login is coming soon", "info")
-                      }
+                      onClick={() => toast("Password login is coming soon", "info")}
                       className="mt-6 w-full rounded-xl bg-cyan-400 py-3.5 font-black text-black"
                     >
                       Coming Soon
@@ -424,9 +403,7 @@ export default function LoginModal({
               </>
             )}
 
-            {/* =========================
-                ADMIN TAB
-            ========================= */}
+            {/* ADMIN TAB — unchanged */}
             {tab === "admin" && (
               <motion.form
                 onSubmit={handleAdminLogin}
@@ -442,13 +419,14 @@ export default function LoginModal({
                   >
                     <ShieldCheck size={30} className="text-black" />
                   </motion.div>
-                  <h2 className="text-2xl font-black">Admin Access</h2>
+                  <h2 className="text-2xl font-black text-black dark:text-white">
+                    Admin Access
+                  </h2>
                   <p className="mt-1 text-xs font-bold uppercase tracking-widest text-cyan-400">
                     Secure Login
                   </p>
                 </div>
 
-                {/* Admin ID */}
                 <div className="mb-4">
                   <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-slate-500">
                     Admin ID
@@ -464,12 +442,14 @@ export default function LoginModal({
                       onChange={(e) => setAdminId(e.target.value)}
                       placeholder="e.g. manash"
                       autoComplete="off"
-                      className="w-full rounded-xl border border-white/10 bg-black/40 py-3 pl-11 pr-4 text-sm text-white outline-none transition focus:border-cyan-400"
+                      className="w-full rounded-xl border py-3 pl-11 pr-4 text-sm outline-none transition focus:border-cyan-400
+                                 border-slate-200 dark:border-white/10
+                                 bg-slate-50 dark:bg-black/40
+                                 text-black dark:text-white"
                     />
                   </div>
                 </div>
 
-                {/* Password */}
                 <div className="mb-6">
                   <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-slate-500">
                     Password
@@ -484,30 +464,24 @@ export default function LoginModal({
                       value={adminPassword}
                       onChange={(e) => setAdminPassword(e.target.value)}
                       placeholder="Enter your password"
-                      className="w-full rounded-xl border border-white/10 bg-black/40 py-3 pl-11 pr-11 text-sm text-white outline-none transition focus:border-cyan-400"
+                      className="w-full rounded-xl border py-3 pl-11 pr-11 text-sm outline-none transition focus:border-cyan-400
+                                 border-slate-200 dark:border-white/10
+                                 bg-slate-50 dark:bg-black/40
+                                 text-black dark:text-white"
                     />
                     <button
                       type="button"
-                      onClick={() =>
-                        setShowAdminPassword(!showAdminPassword)
-                      }
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-white"
+                      onClick={() => setShowAdminPassword(!showAdminPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 transition hover:text-black dark:hover:text-white"
                     >
-                      {showAdminPassword ? (
-                        <EyeOff size={16} />
-                      ) : (
-                        <Eye size={16} />
-                      )}
+                      {showAdminPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                 </div>
 
-                {/* Submit */}
                 <button
                   type="submit"
-                  disabled={
-                    adminLoading || !adminId || !adminPassword
-                  }
+                  disabled={adminLoading || !adminId || !adminPassword}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-500 px-5 py-3 text-sm font-bold text-black transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {adminLoading ? (
@@ -515,10 +489,7 @@ export default function LoginModal({
                   ) : (
                     <>
                       Unlock Dashboard
-                      <ArrowLeft
-                        size={16}
-                        className="rotate-180 transition group-hover:translate-x-1"
-                      />
+                      <ArrowLeft size={16} className="rotate-180" />
                     </>
                   )}
                 </button>
