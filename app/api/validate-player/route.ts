@@ -12,49 +12,58 @@ export async function POST(request: Request) {
     }
 
     const apiKey = process.env.GAME_API_KEY;
-    const apiSecret = process.env.GAME_API_SECRET;
 
-    if (!apiKey || !apiSecret) {
+    if (!apiKey) {
       return NextResponse.json(
-        { success: false, error: "API credentials missing from environment" },
+        { success: false, error: "API key not configured in environment" },
         { status: 500 }
       );
     }
 
-    // Replace the URL with your provider's specific player validation endpoint
-    const response = await fetch("https://api.aluu.id/v1/validate", {
-      method: "POST",
+    // Map your local game slugs to ALU game codes (e.g., 'mobile-legends' -> 'mlbb')
+    const gameCodeMap: Record<string, string> = {
+      "mobile-legends": "mlbb",
+      "free-fire": "freefire",
+      "pubg-mobile": "pubgm",
+    };
+
+    const code = gameCodeMap[gameSlug] || gameSlug || "mlbb";
+
+    // Query ALU API Name Checker endpoint
+    const url = new URL("https://aluu.in/api/check/game-check");
+    url.searchParams.append("code", code);
+    url.searchParams.append("characterId", playerId);
+    if (serverId) {
+      url.searchParams.append("server_code", serverId);
+    }
+
+    const response = await fetch(url.toString(), {
+      method: "GET",
       headers: {
-        "Content-Type": "application/json",
-        "X-Api-Key": apiKey,
-        "X-Api-Secret": apiSecret,
+        "x-api-key": apiKey,
       },
-      body: JSON.stringify({
-        game: gameSlug,
-        user_id: playerId,
-        zone_id: serverId || "",
-      }),
     });
 
     const data = await response.json();
 
-    if (data && (data.username || data.nickname || data.data?.username)) {
+    if (data && data.username) {
       return NextResponse.json({
         success: true,
-        username: data.username || data.nickname || data.data?.username,
+        username: data.username,
+        region: data.region || "",
       });
     }
 
     return NextResponse.json(
       {
         success: false,
-        error: data.message || "Player ID / Server ID not found",
+        error: data.message || "Player ID or Server ID not found",
       },
       { status: 404 }
     );
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: "Failed to connect to verification service" },
+      { success: false, error: "Failed to connect to ID verification server" },
       { status: 500 }
     );
   }
